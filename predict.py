@@ -31,7 +31,7 @@ class HomomorphicFilter:
         self.b = float(b)
 
     # Filters
-    def __butterworth_filter(self, I_shape, filter_params):
+    def __butterworth_filter(self, I_shape, filter_params):#巴特沃斯滤波器
         P = I_shape[0] / 2
         Q = I_shape[1] / 2
         U, V = np.meshgrid(range(I_shape[0]), range(I_shape[1]), sparse=False, indexing='ij')
@@ -39,7 +39,7 @@ class HomomorphicFilter:
         H = 1 / (1 + (Duv / filter_params[0] ** 2) ** filter_params[1])
         return (1 - H)
 
-    def __gaussian_filter(self, I_shape, filter_params):
+    def __gaussian_filter(self, I_shape, filter_params):#高斯滤波
         P = I_shape[0] / 2
         Q = I_shape[1] / 2
         H = np.zeros(I_shape)
@@ -49,12 +49,12 @@ class HomomorphicFilter:
         return (1 - H)
 
     # Methods
-    def __apply_filter(self, I, H):
+    def __apply_filter(self, I, H):#傅里叶别换
         H = np.fft.fftshift(H)
         I_filtered = (self.a + self.b * H) * I
         return I_filtered
 
-    def filter(self, I, filter_params, filter='butterworth', H=None):
+    def filter(self, I, filter_params, filter='butterworth', H=None):#同态滤波
         """
         Method to apply homormophic filter on an image
         Attributes:
@@ -269,7 +269,7 @@ class CardPredictor:
         xr = 0
         yh = 0
         yl = row_num
-        # col_num_limit = self.cfg["col_num_limit"]
+        col_num_limit = self.cfg["col_num_limit"]
         row_num_limit = self.cfg["row_num_limit"]
         col_num_limit = col_num * 0.8 if color != "green" else col_num * 0.5  # 绿色有渐变
         for i in range(row_num):
@@ -316,12 +316,10 @@ class CardPredictor:
                     digit_img = cv2.imread(filepath)
                     digit_img = cv2.cvtColor(digit_img, cv2.COLOR_BGR2GRAY)
                     chars_train.append(digit_img)
-                    # chars_label.append(1)
                     chars_label.append(root_int)
 
             chars_train = list(map(deskew, chars_train))
             chars_train = preprocess_hog(chars_train)
-            # chars_train = chars_train.reshape(-1, 20, 20).astype(np.float32)
             chars_label = np.array(chars_label)
             self.model.train(chars_train, chars_label)
         if os.path.exists("svmchinese.dat"):
@@ -339,40 +337,36 @@ class CardPredictor:
                     digit_img = cv2.imread(filepath)
                     digit_img = cv2.cvtColor(digit_img, cv2.COLOR_BGR2GRAY)
                     chars_train.append(digit_img)
-                    # chars_label.append(1)
                     chars_label.append(index)
             chars_train = list(map(deskew, chars_train))
             chars_train = preprocess_hog(chars_train)
-            # chars_train = chars_train.reshape(-1, 20, 20).astype(np.float32)
             chars_label = np.array(chars_label)
-            # print(chars_train.shape)
             self.modelchinese.train(chars_train, chars_label)
 
-    def __imgshow_and_key_detect(self, window_name, img):
+    def __imgshow_and_key_detect(self, window_name, img):#按a进行下一步
         cv2.imshow(window_name, img)
         while True:
             key = cv2.waitKey()
             if key == ord('a'):
                 break
 
-    def __gamma_transform(self, img):
-        gamma = 0.25
+    def __gamma_transform(self, img, gamma):#gamma变换
         Dm = 255
         img = np.power(img / Dm, gamma)
         img = np.array(Dm * img, dtype=np.uint8)
         return img
 
-    def __s_transform(self, alpha, img):
+    def __s_transform(self, alpha, img):#S变换（未使用）
         img = 255 / 2 * (1 + 1 / np.tan(alpha * 3.1415926) * np.tan(
             alpha * 3.1415926 * (np.array(img, dtype=np.float32) / 255 - 1 / 2)))
         img = np.array(img, dtype=np.uint8)
         return img
 
-    def __show_plt(self, img):
+    def __show_plt(self, img):#显示灰度直方图
         plt.pyplot.hist(img.ravel(), 256, [0, 256])
         plt.pyplot.show()
 
-    def __resize(self, car_pic, resize_rate=1):
+    def __resize(self, car_pic, resize_rate=1):#分辨率调整
         if type(car_pic) == type(""):
             img = imreadex(car_pic)
         else:
@@ -395,29 +389,37 @@ class CardPredictor:
         img = homo_filter.filter(I=img, filter_params=[para1, para2])
         return img
 
-    def __dark_or_not(self,img,dark_threshold,prop_threshold):
+    def __dark_or_not(self,img,dark_threshold,prop_threshold,mode):#1为判断暗，2为判断亮
         # 把图片转换为灰度图
         # 获取灰度图矩阵的行数和列数
         r, c = img.shape[:2]
         dark_sum = 0 # 偏暗的像素 初始化为0个
         dark_prop = 0  # 偏暗像素所占比例初始化为0
         pixels_sum = r * c  # 整个灰度图的像素个数为r*c
-
         # 遍历灰度图的所有像素
-        for row in img:
-            for colum in row:
-                for value in colum:
-                    if int(value) < dark_threshold:  # 人为设置的超参数,表示0~39的灰度值为暗
+        if mode==1:
+            for row in img:
+                for colum in row:
+                    if int(colum) < dark_threshold:  # 人为设置的超参数,表示0~39的灰度值为暗
                         dark_sum += 1
-        dark_prop = dark_sum / pixels_sum
-        print("这么多黑的像素点:" + str(dark_sum))
-        print("一共这么多像素点:" + str(pixels_sum))
-        print("暗的像素点所占比例:" + str(dark_prop))
+            dark_prop = dark_sum / pixels_sum
+            print("这么多黑的像素点:" + str(dark_sum))
+            print("一共这么多像素点:" + str(pixels_sum))
+            print("暗的像素点所占比例:" + str(dark_prop))
+        elif mode==2:
+            for row in img:
+                for colum in row:
+                    if int(colum) > dark_threshold:  # 人为设置的超参数,表示0~39的灰度值为暗
+                        dark_sum += 1
+            dark_prop = dark_sum / pixels_sum
+            print("这么多亮的像素点:" + str(dark_sum))
+            print("一共这么多像素点:" + str(pixels_sum))
+            print("亮的像素点所占比例:" + str(dark_prop))
         if dark_prop >= prop_threshold:  # 人为设置的超参数:表示若偏暗像素所占比例超过0.78,则这张图被认为整体环境黑暗的图片
-            print("暗了")
+            print("满足",prop_threshold*100,"%","的灰度在",dark_threshold,"下的要求")
             return True
         else:
-            print("亮了!")
+            print("不满足",prop_threshold*100,"%","的灰度在",dark_threshold,"下的要求")
             return False
 
     def predict(self, car_pic, resize_rate=1):
@@ -430,16 +432,43 @@ class CardPredictor:
 
         self.__imgshow_and_key_detect("RGB_after_gauss", img) #显示
 
-        if self.__dark_or_not(img,40,0.9):
-            img = self.__gamma_transform(img)
+        if self.__dark_or_not(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY),50,0.75,1):#很暗
+            self.__show_plt(img)  # 显示灰度直方图
+            img = self.__gamma_transform(img, 0.25)
             img = cv2.GaussianBlur(img, (blur, blur), 0)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            self.__imgshow_and_key_detect("gamma", img)  # 显示
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        elif self.__dark_or_not(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 75, 0.65,1):#较暗
+            self.__show_plt(img)  # 显示灰度直方图
+            img = self.__gamma_transform(img, 0.5)
+            img = cv2.GaussianBlur(img, (blur, blur), 0)
+            self.__imgshow_and_key_detect("gamma", img)  # 显示
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        elif self.__dark_or_not(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 200, 0.75, 2):  # 很亮
+            self.__show_plt(img)  # 显示灰度直方图
+            img = self.__gamma_transform(img, 1.5)
+            img = cv2.GaussianBlur(img, (blur, blur), 0)
+            self.__imgshow_and_key_detect("gamma", img)  # 显示
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        elif self.__dark_or_not(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 175, 0.65,2):#较亮
+            self.__show_plt(img)  # 显示灰度直方图
+            img = self.__gamma_transform(img, 1.25)
+            img = cv2.GaussianBlur(img, (blur, blur), 0)
+            self.__imgshow_and_key_detect("gamma", img)  # 显示
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        else:
+            self.__show_plt(img)  # 显示灰度直方图
+            img = self.__gamma_transform(img, 1)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img = cv2.equalizeHist(img)  # 直方图均衡
+            img = cv2.GaussianBlur(img, (blur, blur), 0)
+            self.__imgshow_and_key_detect("equality", img)  # 显示
         self.__homofilter(img)
-        self.__imgshow_and_key_detect("grey_after_gauss_and_dark", img)  # 显示
-        self.__show_plt(img)
+        self.__imgshow_and_key_detect("grey_after_homo", img)  # 显示
+        self.__show_plt(img)#显示灰度直方图
 
-        # equ = cv2.equalizeHist(img)
-        # img = np.hstack((img, equ))
+        # equ = cv2.equalizeHist(img)#直方图均衡（未使用）
+        # img = np.hstack((img, equ))#原图与均衡后的图叠加（未使用）
 
         # 去掉图像中不会是车牌的区域
         kernel = np.ones((20, 20), np.uint8)
@@ -454,6 +483,7 @@ class CardPredictor:
         kernel = np.ones((self.cfg["morphologyr"], self.cfg["morphologyc"]), np.uint8)
         img_edge1 = cv2.morphologyEx(img_edge, cv2.MORPH_CLOSE, kernel)
         img_edge2 = cv2.morphologyEx(img_edge1, cv2.MORPH_OPEN, kernel)
+        self.__imgshow_and_key_detect("open_close", img_edge2)
 
         # 查找图像边缘整体形成的矩形区域，可能有很多，车牌就在其中一个矩形区域中
         try:
@@ -461,7 +491,6 @@ class CardPredictor:
         except ValueError:
             image, contours, hierarchy = cv2.findContours(img_edge2, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         contours = [cnt for cnt in contours if cv2.contourArea(cnt) > Min_Area]
-        # print('len(contours)', len(contours))
         # 一一排除不是车牌的矩形区域
         car_contours = []
         for cnt in contours:
@@ -517,8 +546,7 @@ class CardPredictor:
                 card_img = dst[int(left_point[1]):int(heigth_point[1]), int(left_point[0]):int(new_right_point[0])]
                 card_imgs.append(card_img)
                 new_card_img = card_img
-                cv2.imshow("card", card_img)
-                cv2.waitKey()
+                self.__imgshow_and_key_detect("card",card_img)
             elif left_point[1] > right_point[1]:  # 负角度
                 new_left_point = [left_point[0], heigth_point[1]]
                 pts2 = np.float32([new_left_point, heigth_point, right_point])  # 字符只是高度需要改变
@@ -580,8 +608,6 @@ class CardPredictor:
             print(color)
             colors.append(color)
             print(blue, green, yello, black, white, card_img_count)
-            # cv2.imshow("color", card_img)
-            # cv2.waitKey(0)
             if limit1 == 0:
                 continue
             # 以上为确定车牌颜色
@@ -625,16 +651,13 @@ class CardPredictor:
         card_color = None
         for i, color in enumerate(colors):
             if color in ("blue", "yello", "green"):
-                card_img = new_card_img
+                # card_img = new_card_img
+                card_img = card_imgs[i]
                 gray_img = cv2.cvtColor(card_img, cv2.COLOR_BGR2GRAY)
-                # cv2.imshow("process",card_img)
-                # cv2.waitKey(3000)
                 # 黄、绿车牌字符比背景暗、与蓝车牌刚好相反，所以黄、绿车牌需要反向
                 if color == "green" or color == "yello":
                     gray_img = cv2.bitwise_not(gray_img)
                 ret, gray_img = cv2.threshold(gray_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                # cv2.imshow("recognize",gray_img)
-                # cv2.waitKey(3000)
                 # 查找水平直方图波峰
                 x_histogram = np.sum(gray_img, axis=1)
                 x_min = np.min(x_histogram)
@@ -704,8 +727,6 @@ class CardPredictor:
                     w = part_card.shape[1] // 3
                     part_card = cv2.copyMakeBorder(part_card, 0, 0, w, w, cv2.BORDER_CONSTANT, value=[0, 0, 0])
                     part_card = cv2.resize(part_card, (SZ, SZ), interpolation=cv2.INTER_AREA)
-                    # cv2.imshow("part", part_card_old)
-                    # cv2.waitKey(0)
                     # cv2.imwrite("u.jpg", part_card)
                     # part_card = deskew(part_card)
                     part_card = preprocess_hog([part_card])
