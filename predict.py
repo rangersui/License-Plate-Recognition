@@ -498,8 +498,8 @@ class CardPredictor:
             if area_width < area_height:
                 area_width, area_height = area_height, area_width
             wh_ratio = area_width / area_height
-            # 要求矩形区域长宽比在2到5.5之间，2到5.5是车牌的长宽比，其余的矩形排除
-            if wh_ratio > 2 and wh_ratio < 5:
+            # 要求矩形区域长宽比在1.5到5.5之间，1.5到5.5是车牌的长宽比，其余的矩形排除
+            if wh_ratio > 1.5 and wh_ratio < 5.5:
                 car_contours.append(rect)
                 box = cv2.boxPoints(rect)
                 box = np.int0(box)
@@ -518,7 +518,7 @@ class CardPredictor:
                 angle = 1
             else:
                 angle = rect[2]
-            rect = (rect[0], (rect[1][0] + 12, rect[1][1] + 8), angle)  # 扩大范围，避免车牌边缘被排除
+            rect = (rect[0], (rect[1][0] + 12, rect[1][1] + 10), angle)  # 扩大范围，避免车牌边缘被排除
 
             box = cv2.boxPoints(rect)
             heigth_point = right_point = [0, 0]
