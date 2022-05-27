@@ -474,7 +474,6 @@ class CardPredictor:
             self.__imgshow_and_key_detect("equality", img)  # 显示
         self.__show_plt(img)#显示灰度直方图
 
-        # equ = cv2.equalizeHist(img)#直方图均衡（未使用）
         # img = np.hstack((img, equ))#原图与均衡后的图叠加（未使用）
 
         # 去掉图像中不会是车牌的区域
@@ -632,10 +631,7 @@ class CardPredictor:
                 xr = col_num
                 need_accurate = True
 
-            card_imgs[card_index] = card_img[yl:yh, xl:xr] if color != "green" or yl < (yh - yl) // 4 else card_img[
-                                                                                                           yl - (
-                                                                                                                   yh - yl) // 4:yh,
-                                                                                                           xl:xr]
+            card_imgs[card_index] = card_img[yl:yh, xl:xr] if color != "green" or yl < (yh - yl) // 4 else card_img[yl - (yh - yl) // 4:yh,xl:xr]
             if need_accurate:  # 可能x或y方向未缩小，需要再试一次
                 card_img = card_imgs[card_index]
                 card_img_hsv = cv2.cvtColor(card_img, cv2.COLOR_BGR2HSV)
@@ -648,10 +644,7 @@ class CardPredictor:
                 if xl >= xr:
                     xl = 0
                     xr = col_num
-            card_imgs[card_index] = card_img[yl:yh, xl:xr] if color != "green" or yl < (yh - yl) // 4 else card_img[
-                                                                                                           yl - (
-                                                                                                                   yh - yl) // 4:yh,
-                                                                                                           xl:xr]
+            card_imgs[card_index] = card_img[yl:yh, xl:xr] if color != "green" or yl < (yh - yl) // 4 else card_img[yl - (yh - yl) // 4:yh,xl:xr]
         # 以上为车牌定位
         # 以下为识别车牌中的字符
         predict_result = []
