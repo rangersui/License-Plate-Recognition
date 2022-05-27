@@ -389,37 +389,43 @@ class CardPredictor:
         img = homo_filter.filter(I=img, filter_params=[para1, para2])
         return img
 
-    def __dark_or_not(self,img,dark_threshold,prop_threshold,mode):#1为判断暗，2为判断亮
+    def __dark_or_not(self, img, grey_threshold, prop_threshold, mode):#1为判断暗，2为判断亮
         # 把图片转换为灰度图
         # 获取灰度图矩阵的行数和列数
         r, c = img.shape[:2]
-        dark_sum = 0 # 偏暗的像素 初始化为0个
-        dark_prop = 0  # 偏暗像素所占比例初始化为0
+        dark_light_sum = 0 # 偏暗/亮的像素 初始化为0个
+        dark_light_prop = 0  # 偏暗/亮像素所占比例初始化为0
         pixels_sum = r * c  # 整个灰度图的像素个数为r*c
         # 遍历灰度图的所有像素
         if mode==1:
             for row in img:
                 for colum in row:
-                    if int(colum) < dark_threshold:  # 人为设置的超参数,表示0~39的灰度值为暗
-                        dark_sum += 1
-            dark_prop = dark_sum / pixels_sum
-            print("这么多黑的像素点:" + str(dark_sum))
+                    if int(colum) < grey_threshold:  # 人为设置的超参数,表示0~39的灰度值为暗
+                        dark_light_sum += 1
+            dark_light_prop = dark_light_sum / pixels_sum
+            print("这么多黑的像素点:" + str(dark_light_sum))
             print("一共这么多像素点:" + str(pixels_sum))
-            print("暗的像素点所占比例:" + str(dark_prop))
+            print("暗的像素点所占比例:" + str(dark_light_prop))
         elif mode==2:
             for row in img:
                 for colum in row:
-                    if int(colum) > dark_threshold:  # 人为设置的超参数,表示0~39的灰度值为暗
-                        dark_sum += 1
-            dark_prop = dark_sum / pixels_sum
-            print("这么多亮的像素点:" + str(dark_sum))
+                    if int(colum) > grey_threshold:  # 人为设置的超参数,表示0~39的灰度值为亮
+                        dark_light_sum += 1
+            dark_light_prop = dark_light_sum / pixels_sum
+            print("这么多亮的像素点:" + str(dark_light_sum))
             print("一共这么多像素点:" + str(pixels_sum))
-            print("亮的像素点所占比例:" + str(dark_prop))
-        if dark_prop >= prop_threshold:  # 人为设置的超参数:表示若偏暗像素所占比例超过0.78,则这张图被认为整体环境黑暗的图片
-            print("满足",prop_threshold*100,"%","的灰度在",dark_threshold,"下的要求")
+            print("亮的像素点所占比例:" + str(dark_light_prop))
+        if dark_light_prop >= prop_threshold:  # 人为设置的超参数:表示若偏暗像素所占比例超过prop_threshold,则这张图被认为整体环境黑暗/过亮
+            if mode == 1:
+                print("满足", prop_threshold * 100,"%","的灰度或者更高比例在", grey_threshold, "下的要求")
+            elif mode ==2:
+                print("满足", prop_threshold * 100,"%","的灰度或者更高比例在", grey_threshold, "上的要求")
             return True
-        else:
-            print("不满足",prop_threshold*100,"%","的灰度在",dark_threshold,"下的要求")
+        elif dark_light_prop < prop_threshold:   # 人为设置的超参数:表示若偏暗像素所占比例超过prop_threshold,则这张图被认为整体环境黑暗/过亮
+            if mode == 1:
+                print("不满足", prop_threshold * 100,"%","的灰度在", grey_threshold, "下的要求")
+            elif mode == 2:
+                print("不满足", prop_threshold * 100, "%", "的灰度在", grey_threshold, "上的要求")
             return False
 
     def predict(self, car_pic, resize_rate=1):
@@ -436,34 +442,41 @@ class CardPredictor:
             self.__show_plt(img)  # 显示灰度直方图
             img = self.__gamma_transform(img, 0.25)
             img = cv2.GaussianBlur(img, (blur, blur), 0)
-            self.__imgshow_and_key_detect("gamma", img)  # 显示
+            # self.__imgshow_and_key_detect("gamma", img)  # 显示
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img = self.__homofilter(img)
+            self.__imgshow_and_key_detect("grey_after_gamma_and_homo", img)  # 显示
         elif self.__dark_or_not(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 75, 0.65,1):#较暗
             self.__show_plt(img)  # 显示灰度直方图
-            img = self.__gamma_transform(img, 0.5)
+            # img = self.__gamma_transform(img, 0.5)
             img = cv2.GaussianBlur(img, (blur, blur), 0)
-            self.__imgshow_and_key_detect("gamma", img)  # 显示
+            # self.__imgshow_and_key_detect("gamma", img)  # 显示
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img = self.__homofilter(img)
+            self.__imgshow_and_key_detect("grey_after_gamma_and_homo", img)  # 显示
         elif self.__dark_or_not(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 200, 0.75, 2):  # 很亮
             self.__show_plt(img)  # 显示灰度直方图
             img = self.__gamma_transform(img, 1.5)
             img = cv2.GaussianBlur(img, (blur, blur), 0)
             self.__imgshow_and_key_detect("gamma", img)  # 显示
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img = self.__homofilter(img)
+            self.__imgshow_and_key_detect("grey_after_gamma_and_homo", img)  # 显示
         elif self.__dark_or_not(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 175, 0.65,2):#较亮
             self.__show_plt(img)  # 显示灰度直方图
             img = self.__gamma_transform(img, 1.25)
             img = cv2.GaussianBlur(img, (blur, blur), 0)
-            self.__imgshow_and_key_detect("gamma", img)  # 显示
+            # self.__imgshow_and_key_detect("gamma", img)  # 显示
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            img = self.__homofilter(img)
+            self.__imgshow_and_key_detect("grey_after_gamma_and_homo", img)  # 显示
         else:
             self.__show_plt(img)  # 显示灰度直方图
-            img = self.__gamma_transform(img, 1)
+            # img = self.__gamma_transform(img, 1)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             img = cv2.equalizeHist(img)  # 直方图均衡
+            self.__show_plt(img)
             self.__imgshow_and_key_detect("equality", img)  # 显示
-        self.__homofilter(img)
-        self.__imgshow_and_key_detect("grey_after_homo", img)  # 显示
         self.__show_plt(img)#显示灰度直方图
 
         # equ = cv2.equalizeHist(img)#直方图均衡（未使用）
