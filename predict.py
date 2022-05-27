@@ -477,7 +477,7 @@ class CardPredictor:
         # 找到图像边缘
         ret, img_thresh = cv2.threshold(img_opening, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         img_edge = cv2.Canny(img_thresh, 100, 200)
-        self.__imgshow_and_key_detect("canny", img_thresh)
+        self.__imgshow_and_key_detect("canny", img_edge)
         # 使用开运算和闭运算让图像边缘成为一个整体
         kernel = np.ones((self.cfg["morphologyr"], self.cfg["morphologyc"]), np.uint8)
         img_edge1 = cv2.morphologyEx(img_edge, cv2.MORPH_CLOSE, kernel)
@@ -498,8 +498,8 @@ class CardPredictor:
             if area_width < area_height:
                 area_width, area_height = area_height, area_width
             wh_ratio = area_width / area_height
-            # 要求矩形区域长宽比在2到5.5之间，2到5.5是车牌的长宽比，其余的矩形排除
-            if wh_ratio > 2 and wh_ratio < 5:
+            # 要求矩形区域长宽比在1.5到5.5之间，1.5到5.5是车牌的长宽比，其余的矩形排除
+            if wh_ratio > 1.5 and wh_ratio < 5.5:
                 car_contours.append(rect)
                 box = cv2.boxPoints(rect)
                 box = np.int0(box)
@@ -518,7 +518,7 @@ class CardPredictor:
                 angle = 1
             else:
                 angle = rect[2]
-            rect = (rect[0], (rect[1][0] + 5, rect[1][1] + 5), angle)  # 扩大范围，避免车牌边缘被排除
+            rect = (rect[0], (rect[1][0] + 12, rect[1][1] + 10), angle)  # 扩大范围，避免车牌边缘被排除
 
             box = cv2.boxPoints(rect)
             heigth_point = right_point = [0, 0]
@@ -673,7 +673,7 @@ class CardPredictor:
                 # 查找垂直直方图波峰
                 row_num, col_num = gray_img.shape[:2]
                 # 去掉车牌上下边缘1个像素，避免白边影响阈值判断
-                gray_img = gray_img[1:row_num - 1]
+                gray_img = gray_img[1:row_num]
                 y_histogram = np.sum(gray_img, axis=0)
                 y_min = np.min(y_histogram)
                 y_average = np.sum(y_histogram) / y_histogram.shape[0]
@@ -736,6 +736,7 @@ class CardPredictor:
                     else:
                         resp = self.model.predict(part_card)
                         charactor = chr(int(resp[0]))
+                    self.__imgshow_and_key_detect("part", part_card_old)
                     # 判断最后一个数是否是车牌边缘，假设车牌边缘被认为是1
                     if charactor == "1" and i == len(part_cards) - 1:
                         if part_card_old.shape[0] / part_card_old.shape[1] >= 8:  # 1太细，认为是边缘
