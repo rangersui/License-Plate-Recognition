@@ -442,31 +442,27 @@ class CardPredictor:
             self.__show_plt(img)  # 显示灰度直方图
             img = self.__gamma_transform(img, 0.25)
             img = cv2.GaussianBlur(img, (blur, blur), 0)
-            # self.__imgshow_and_key_detect("gamma", img)  # 显示
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             img = self.__homofilter(img)
             self.__imgshow_and_key_detect("grey_after_gamma_and_homo", img)  # 显示
         elif self.__dark_or_not(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 75, 0.65,1):#较暗
             self.__show_plt(img)  # 显示灰度直方图
-            # img = self.__gamma_transform(img, 0.5)
+            img = self.__gamma_transform(img, 0.5)
             img = cv2.GaussianBlur(img, (blur, blur), 0)
-            # self.__imgshow_and_key_detect("gamma", img)  # 显示
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             img = self.__homofilter(img)
             self.__imgshow_and_key_detect("grey_after_gamma_and_homo", img)  # 显示
         elif self.__dark_or_not(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 200, 0.75, 2):  # 很亮
             self.__show_plt(img)  # 显示灰度直方图
-            img = self.__gamma_transform(img, 1.5)
+            img = self.__gamma_transform(img, 1.6)
             img = cv2.GaussianBlur(img, (blur, blur), 0)
-            self.__imgshow_and_key_detect("gamma", img)  # 显示
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             img = self.__homofilter(img)
             self.__imgshow_and_key_detect("grey_after_gamma_and_homo", img)  # 显示
         elif self.__dark_or_not(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 175, 0.65,2):#较亮
             self.__show_plt(img)  # 显示灰度直方图
-            img = self.__gamma_transform(img, 1.25)
+            img = self.__gamma_transform(img, 1.3)
             img = cv2.GaussianBlur(img, (blur, blur), 0)
-            # self.__imgshow_and_key_detect("gamma", img)  # 显示
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             img = self.__homofilter(img)
             self.__imgshow_and_key_detect("grey_after_gamma_and_homo", img)  # 显示
@@ -475,11 +471,9 @@ class CardPredictor:
             # img = self.__gamma_transform(img, 1)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             img = cv2.equalizeHist(img)  # 直方图均衡
-            self.__show_plt(img)
             self.__imgshow_and_key_detect("equality", img)  # 显示
         self.__show_plt(img)#显示灰度直方图
 
-        # equ = cv2.equalizeHist(img)#直方图均衡（未使用）
         # img = np.hstack((img, equ))#原图与均衡后的图叠加（未使用）
 
         # 去掉图像中不会是车牌的区域
@@ -603,15 +597,15 @@ class CardPredictor:
             color = "no"
 
             limit1 = limit2 = 0
-            if yello * 2 >= card_img_count:
+            if yello * 2.2 >= card_img_count:
                 color = "yello"
                 limit1 = 11
                 limit2 = 34  # 有的图片有色偏偏绿
-            elif green * 2 >= card_img_count:
+            elif green * 2.2 >= card_img_count:
                 color = "green"
                 limit1 = 35
                 limit2 = 99
-            elif blue * 2 >= card_img_count:
+            elif blue * 2.2 >= card_img_count:
                 color = "blue"
                 limit1 = 100
                 limit2 = 124  # 有的图片有色偏偏紫
@@ -637,10 +631,7 @@ class CardPredictor:
                 xr = col_num
                 need_accurate = True
 
-            card_imgs[card_index] = card_img[yl:yh, xl:xr] if color != "green" or yl < (yh - yl) // 4 else card_img[
-                                                                                                           yl - (
-                                                                                                                   yh - yl) // 4:yh,
-                                                                                                           xl:xr]
+            card_imgs[card_index] = card_img[yl:yh, xl:xr] if color != "green" or yl < (yh - yl) // 4 else card_img[yl - (yh - yl) // 4:yh,xl:xr]
             if need_accurate:  # 可能x或y方向未缩小，需要再试一次
                 card_img = card_imgs[card_index]
                 card_img_hsv = cv2.cvtColor(card_img, cv2.COLOR_BGR2HSV)
@@ -653,10 +644,7 @@ class CardPredictor:
                 if xl >= xr:
                     xl = 0
                     xr = col_num
-            card_imgs[card_index] = card_img[yl:yh, xl:xr] if color != "green" or yl < (yh - yl) // 4 else card_img[
-                                                                                                           yl - (
-                                                                                                                   yh - yl) // 4:yh,
-                                                                                                           xl:xr]
+            card_imgs[card_index] = card_img[yl:yh, xl:xr] if color != "green" or yl < (yh - yl) // 4 else card_img[yl - (yh - yl) // 4:yh,xl:xr]
         # 以上为车牌定位
         # 以下为识别车牌中的字符
         predict_result = []
@@ -697,7 +685,7 @@ class CardPredictor:
                 # for wave in wave_peaks:
                 #	cv2.line(card_img, pt1=(wave[0], 5), pt2=(wave[1], 5), color=(0, 0, 255), thickness=2)
                 # 车牌字符数应大于6
-                if len(wave_peaks) <= 6:
+                if len(wave_peaks) < 6:
                     print("peak less 1:", len(wave_peaks))
                     continue
 
@@ -726,7 +714,7 @@ class CardPredictor:
                     if np.mean(point_img) < 255 / 5:
                         wave_peaks.pop(2)
 
-                if len(wave_peaks) <= 6:
+                if len(wave_peaks) < 6:
                     print("peak less 2:", len(wave_peaks))
                     continue
                 part_cards = seperate_card(gray_img, wave_peaks)
